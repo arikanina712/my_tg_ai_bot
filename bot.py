@@ -156,19 +156,7 @@ async def daily_job():
     await make_post()
 
 # === Основной цикл ===
-async def main():
-    await bot.delete_webhook(drop_pending_updates=True)
-    scheduler.start()
-    try:
-        await bot.send_message(CHAT_ID, "✅ Бот запущен. Пишите /draft в ЛС боту.")
-    except Exception:
-        logging.exception("Не получилось написать в CHAT_ID при старте")
-
-    logging.info("Стартуем polling…")
-    await asyncio.gather(start_web(), dp.start_polling(bot, allowed_updates=["message", "callback_query"]))
-
 from aiohttp import web
-import os
 
 async def health(_):
     return web.Response(text="ok")
@@ -176,13 +164,29 @@ async def health(_):
 async def start_web():
     app = web.Application()
     app.router.add_get("/", health)
-    port = int(os.getenv("PORT", "10000"))
+    port = int(os.getenv("PORT", "10000"))  # Render задаёт PORT
     runner = web.AppRunner(app)
     await runner.setup()
-    await web.TCPSite(runner, "0.0.0.0", port).start()
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+    logging.info(f"HTTP server started on 0.0.0.0:{port}")
 
-await asyncio.gather(start_web(), dp.start_polling(bot))
+async def main():
+    # важно: мы работаем через long polling, поэтому убираем webhook
+    await bot.delete_webhook(drop_pending_updates=True)
+    scheduler.start()
+
+    try:
+        await bot.send_message(CHAT_ID, "✅ Бот запущен. Пишите /draft в ЛС боту.")
+    except Exception:
+        logging.exception("Не получилось написать в CHAT_ID при старте")
+
+    logging.info("Стартуем polling…")
+    # параллельно поднимаем health-сервер (чтобы Render видел открытый порт)
+    await asyncio.gather(
+        start_web(),
+        dp.start_polling(bot, allowed_updates=["message", "callback_query"]),
+    )
 
 if __name__ == "__main__":
     asyncio.run(main())
-
