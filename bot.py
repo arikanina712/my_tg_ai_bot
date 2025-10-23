@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 load_dotenv()
+print("🔑 OPENAI_API_KEY length:", len(os.getenv("OPENAI_API_KEY", "")))
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID   = os.getenv("CHAT_ID")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -190,3 +191,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
